@@ -4,7 +4,7 @@
    abgeleitet und nur auf diesem Geraet gespeichert (IndexedDB). Ohne Schluessel: Passwort-Seite. */
 const BASIS = new URL('./', self.location).pathname
 const OFFEN = ['index.html', 'sw.js', 'schluessel.json', 'manifest.webmanifest', 'icon.png', 'icon-192.png', 'version.txt']
-const TYP = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', json: 'application/json; charset=utf-8', txt: 'text/plain; charset=utf-8', svg: 'image/svg+xml', png: 'image/png', ico: 'image/x-icon', woff2: 'font/woff2', webmanifest: 'application/manifest+json' }
+const TYP = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', json: 'application/json; charset=utf-8', txt: 'text/plain; charset=utf-8', svg: 'image/svg+xml', png: 'image/png', ico: 'image/x-icon', woff2: 'font/woff2', woff: 'font/woff', webmanifest: 'application/manifest+json' }
 let K = null, GIST = undefined
 
 function db() { return new Promise((ok, nein) => { const r = indexedDB.open('cockpit', 1); r.onupgradeneeded = () => r.result.createObjectStore('k'); r.onsuccess = () => ok(r.result); r.onerror = () => nein(r.error) }) }
