@@ -1,0 +1,37 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Cockpit"><title>Cockpit</title>
+<link rel="apple-touch-icon" href="icon.png"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#06231c">
+<style>
+:root{color-scheme:dark}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(900px 500px at 80% -10%,#0f3a2e 0%,transparent 60%),#06231c;color:#eef5f1;font:16px -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif}
+form{width:min(320px,88vw);text-align:center}img{width:72px;height:72px;border-radius:18px;margin-bottom:18px;box-shadow:0 14px 40px rgba(0,0,0,.35)}
+h1{font-size:22px;font-weight:600;margin:0 0 6px;letter-spacing:-.01em}p{color:#9fb3aa;font-size:14px;margin:0 0 22px}
+input,button{width:100%;box-sizing:border-box;padding:14px;border-radius:12px;font-size:16px}
+input{border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#eef5f1;margin-bottom:10px}
+button{border:0;background:#7fd4ad;color:#06231c;font-weight:600}button:disabled{opacity:.6}
+#m{min-height:22px;margin-top:12px;font-size:14px;color:#ff8a80}
+</style></head><body>
+<form id="f" autocomplete="on"><img src="icon.png" alt=""><h1>Trainings-Cockpit</h1><p>Mit deinem Dashboard-Passwort entsperren</p>
+<input id="p" type="password" placeholder="Passwort" autocomplete="current-password" required><button id="b">Entsperren</button><div id="m"></div></form>
+<script>
+const $=id=>document.getElementById(id), b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+function db(){return new Promise((ok,nein)=>{const r=indexedDB.open('cockpit',1);r.onupgradeneeded=()=>r.result.createObjectStore('k');r.onsuccess=()=>ok(r.result);r.onerror=()=>nein(r.error)})}
+async function speichern(raw,gist){const d=await db();await new Promise((ok,nein)=>{const t=d.transaction('k','readwrite');t.objectStore('k').put(raw,'schluessel');if(gist)t.objectStore('k').put(gist,'gist');else t.objectStore('k').delete('gist');t.oncomplete=ok;t.onerror=()=>nein(t.error)})}
+$('f').onsubmit=async e=>{e.preventDefault();const m=$('m'),btn=$('b');m.textContent='';btn.disabled=true;btn.textContent='Prüfe …';
+  try{
+    if(!('serviceWorker' in navigator)||!crypto.subtle) throw new Error('Dieser Browser kann die verschlüsselte Fassung nicht öffnen.');
+    const S=await (await fetch('schluessel.json',{cache:'no-cache'})).json();
+    const basis=await crypto.subtle.importKey('raw',new TextEncoder().encode($('p').value),'PBKDF2',false,['deriveBits']);
+    const raw=new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt:b64(S.s),iterations:S.i,hash:'SHA-256'},basis,256));
+    const k=await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['decrypt']);
+    const pr=new Uint8Array(await (await fetch('pruef.txt.enc',{cache:'no-cache'})).arrayBuffer());
+    try{await crypto.subtle.decrypt({name:'AES-GCM',iv:pr.slice(0,12)},k,pr.slice(12))}catch(_){throw new Error('Passwort stimmt nicht.')}
+    let gist=null; if(S.u){const g=b64(S.u); gist=new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:g.slice(0,12)},k,g.slice(12)))}
+    await speichern(raw,gist);
+    const reg=await navigator.serviceWorker.register('sw.js',{scope:'./'}); await navigator.serviceWorker.ready;
+    (reg.active||navigator.serviceWorker.controller)?.postMessage('neu');
+    location.replace('./');
+  }catch(err){m.textContent=err.message||String(err);btn.disabled=false;btn.textContent='Entsperren'}};
+$('p').focus();
+</script></body></html>
