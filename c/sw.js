@@ -42,6 +42,12 @@ async function liefern(rest, req) {
                      : new Uint8Array(await (await fetch(BASIS + 'daten.json.enc', { cache: 'no-store' })).arrayBuffer())
       return new Response(await entpacke(await entschl(k, b)), { headers: { 'content-type': TYP.json, 'cache-control': 'no-store' } })
     }
+    if (rest === 'details.json') {        // Detail-Kurven: wie die Daten gzip + AES-GCM, eigene Datei im Gist – erst in der Detailansicht geholt
+      const r = GIST ? await fetch(GIST + 'details.enc?t=' + Date.now(), { cache: 'no-store' }) : await fetch(BASIS + 'details.json.enc', { cache: 'no-store' })
+      if (!r.ok) return new Response('{}', { headers: { 'content-type': TYP.json, 'cache-control': 'no-store' } })
+      const b = GIST ? b64(await r.text()) : new Uint8Array(await r.arrayBuffer())
+      return new Response(await entpacke(await entschl(k, b)), { headers: { 'content-type': TYP.json, 'cache-control': 'no-store' } })
+    }
     let p = rest === '' || rest.endsWith('/') ? rest + 'index.html' : rest
     const r = await fetch(BASIS + p + '.enc', { cache: 'no-cache' })
     if (!r.ok) return new Response('nicht gefunden', { status: 404 })
